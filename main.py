@@ -10,8 +10,6 @@ def get_webpage_data(menu_url):
     # success code - 200
     print(r)
 
-    # print content of request
-    print(r.content)
     return r.content
 
 def extract_menu_items(html_content):
@@ -20,18 +18,26 @@ def extract_menu_items(html_content):
     
     # Assuming menu items are wrapped in divs or lists with class 'menu-item'
     # Update selectors based on actual website HTML structure
-    menu_items = soup.select(".menu-item")
+    menu_items = soup.find_all(['div', 'section'])  # Assuming the container class is 'menu-item'
+    print("menu items: ", menu_items)
     
     items = []
     
     for item in menu_items:
-        name = item.select_one(".item-name")  # Modify based on actual HTML
-        description = item.select_one(".item-desc")  # Modify based on actual HTML
-        items.append((name, description))
+        # Find the item name and description using the appropriate classes
+        name = item.find('p', class_='item-name')
+        description = item.find('p', class_='item-desc')
+        print("name: ", name)
+        print("description: ", description)
 
-    print("items: ", items)
-    
+        # Ensure both name and description exist before adding them to the list
+        if name and description:
+            items.append((name.get_text(strip=True), description.get_text(strip=True)))
+        else:
+            print(f"Warning: Couldn't find name or description in this item: {item.prettify()[:100]}")
+        print("items: ", items)
     return items
+
 
 def check_allergens(menu_items, allergens):
     unsafe_items = []
@@ -41,12 +47,13 @@ def check_allergens(menu_items, allergens):
         
         # Check if any of the allergens are in the item description
         for allergy in allergens:
-            if re.search(rf'\b{allergy}\b', description, re.IGNORECASE):
+            if re.search(rf'\b{allergy}\b', description, re.IGNORECASE) or re.search(rf'\b{allergy}\b', name, re.IGNORECASE):
                 found_allergens.append(allergy)
         
         if found_allergens:
-            unsafe_items.append((name, description, found_allergens))
+            unsafe_items.append(name, description, found_allergens)
     
+
     return unsafe_items
 
 def get_menu(web_data, allergens):
@@ -81,8 +88,6 @@ def main():
     # Input: Restaurant menu URL
     menu_url = input("Enter the restaurant menu URL: ")
     web_data = get_webpage_data(menu_url)
-
-    print("web_data: ", web_data)
 
     get_menu(web_data, allergens)
 
